@@ -42,8 +42,8 @@ class BinanceClient():
 
 
 
-def get_data(start_date = dt.datetime(2021,10,7,10,0,0), currency = "BTCUSDT"):
-    client = BinanceClient(binance.client.Client.KLINE_INTERVAL_1HOUR)
+def get_data(start_date = dt.datetime(2021,10,7,10,0,0), currency = "BTCUSDT", interval = binance.client.Client.KLINE_INTERVAL_1MINUTE):
+    client = BinanceClient(binance.client.Client.KLINE_INTERVAL_1MINUTE)
 
     start_date = start_date #dt.datetime(2021,10,7,10,0,0)
     instrument = currency

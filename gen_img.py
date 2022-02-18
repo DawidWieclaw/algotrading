@@ -22,7 +22,7 @@ arguments = argparse.ArgumentParser()
 
 arguments.add_argument("-d", "--date", required=False, help="start date (yyyy-mm-dd)")
 arguments.add_argument("-c", "--instrument", required=False, help="cryptocurrency (BTC, ETH, ...)")
-arguments.add_argument("-t", "--interval", required=False, help="interval in minutes")
+arguments.add_argument("-t", "--interval", required=False, help="interval (1m,3m,5m,15m,30m,1h,2h,4h) default - 1minute")
 arguments.add_argument("-p", "--period", required=False, help="period (for indicators)")
 arguments.add_argument("-i", "--indicator", required=False, help="specyfied indicator ('BB', 'close', 'upper_BB', 'lower_BB', 'middle_BB', 'ma', 'ADX0','ATR0', 'ARO0', 'WLR0')")
 
@@ -50,7 +50,7 @@ kline_df = get_data(
         currency=instrument,
         start_date=start_date)
 
-
+print(kline_df.head())
 interval = 5
 arg_interval = args['interval']
 if not arg_interval is None:
@@ -150,7 +150,7 @@ def gen_BB():
         rev_row = np.flip(np.array(row3)[1:]) 
         plt.plot(rev_row, 'b', linewidth=15.0)
         plt.axis('off')
-        plt.show()
+        #plt.show()
         fig.savefig(name, dpi = 3)
         plt.close(fig)
 
