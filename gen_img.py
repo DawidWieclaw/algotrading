@@ -24,6 +24,7 @@ arguments.add_argument("-d", "--date", required=False, help="start date (yyyy-mm
 arguments.add_argument("-c", "--instrument", required=False, help="cryptocurrency (BTC, ETH, ...)")
 arguments.add_argument("-t", "--interval", required=False, help="interval in minutes")
 arguments.add_argument("-p", "--period", required=False, help="period (for indicators)")
+arguments.add_argument("-i", "--indicator", required=False, help="specyfied indicator ('BB', 'close', 'upper_BB', 'lower_BB', 'middle_BB', 'ma', 'ADX0','ATR0', 'ARO0', 'WLR0')")
 
 
 #ap.add_argument("-b", "--soperand", required=True, help="second operand")
@@ -45,15 +46,8 @@ if not arg_instrument is None:
 
 print("instrument: ", instrument, " start date: ", start_date)
 
-influxclient = InfluxClient(host=InfluxConfig.host,
-                            port=InfluxConfig.port,
-                            user=InfluxConfig.user,
-                            pswd=InfluxConfig.pswd,
-                            dtbs=InfluxConfig.dtbs)
-
-
-kline_df = influxclient.get_klines_since(
-        instrument=instrument,
+kline_df = get_data(
+        currency=instrument,
         start_date=start_date)
 
 
@@ -119,6 +113,13 @@ for column in ['close', 'upper_BB', 'lower_BB', 'middle_BB', 'ma', 'ADX0','ATR0'
       ml_df[f"t_{i}"] = kline_df[column].shift(i)
     ml_df = ml_df.dropna().astype('float32')
     image_data[column] = ml_df
+#create folder
+if not os.path.exists("images"):
+    os.mkdir("images")
+
+if not os.path.exists("images/"+str(period)):
+    os.mkdir("images/"+str(period))
+
 
 ready = set(os.listdir("images/"+ str(period)))
 
@@ -127,36 +128,48 @@ def generate_image(row, name = "images/plot.png"):
     rev_row = np.flip(np.array(row)[1:]) #1: only input
     plt.plot(rev_row, 'k', linewidth=15.0)
     plt.axis('off')
-    plt.show()
+    #plt.show()
     fig.savefig(name, dpi = 3)
     plt.close(fig)
 
 df1 = image_data['upper_BB']
 df2 = image_data['lower_BB']
 df3 = image_data['middle_BB']
-for row1, row2, row3 in zip(df1.iloc, df2.iloc, df3.iloc):
-    name = "images/"+ str(period) + "/" + row1.name[:16] + ";" + "BB" + ".png"
-    if row1.name[:16] + ";" + "BB" + ".png" in ready:
-        continue
-    fig = plt.figure(figsize = (20,20))
-    rev_row = np.flip(np.array(row1)[1:]) 
-    plt.plot(rev_row, 'r', linewidth=15.0)
-    plt.axis('off')
-    rev_row = np.flip(np.array(row2)[1:]) 
-    plt.plot(rev_row, 'g', linewidth=15.0)
-    plt.axis('off')
-    rev_row = np.flip(np.array(row3)[1:]) 
-    plt.plot(rev_row, 'b', linewidth=15.0)
-    plt.axis('off')
-    plt.show()
-    fig.savefig(name, dpi = 3)
-    plt.close(fig)
+def gen_BB():
+    for row1, row2, row3 in zip(df1.iloc, df2.iloc, df3.iloc):
+        name = "images/"+ str(period) + "/" + str(row1.name).replace(" ", "T")[:16] + ";" + "BB" + ".png"
+        if str(row1.name)[:16] + ";" + "BB" + ".png" in ready:
+            continue
+        fig = plt.figure(figsize = (20,20))
+        rev_row = np.flip(np.array(row1)[1:]) 
+        plt.plot(rev_row, 'r', linewidth=15.0)
+        plt.axis('off')
+        rev_row = np.flip(np.array(row2)[1:]) 
+        plt.plot(rev_row, 'g', linewidth=15.0)
+        plt.axis('off')
+        rev_row = np.flip(np.array(row3)[1:]) 
+        plt.plot(rev_row, 'b', linewidth=15.0)
+        plt.axis('off')
+        plt.show()
+        fig.savefig(name, dpi = 3)
+        plt.close(fig)
 
-ratios = []
-for col_name in ['close', 'ma', 'ADX0','ATR0', 'ARO0', 'WLR0']:    
+def gen_rest(col_name):
+    global period, ready
     df = image_data[col_name]
     
     for row in df.iloc:
-        if row.name[:16] + ";" + col_name + ".png" in ready:
+        if str(row.name).replace(" ", "T")[:16] + ";" + col_name + ".png" in ready:
             continue
-        generate_image(row, "images/"+ str(period) + "/" + row.name[:16] + ";" + col_name + ".png")
+        generate_image(row, "images/"+ str(period) + "/" + str(row.name).replace(" ", "T")[:16] + ";" + col_name + ".png")
+
+arg_ind = args["indicator"]
+if arg_ind is None:
+    gen_BB()
+    for indicator in ['close', 'ma', 'ADX0','ATR0', 'ARO0', 'WLR0']:
+        gen_rest(indicator)
+else:
+    if arg_ind == "BB":
+        gen_BB()
+    else:
+        gen_rest(arg_ind)
