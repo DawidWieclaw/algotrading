@@ -9,6 +9,7 @@ import numpy as np
 import talib
 from talib import MA_Type
 import matplotlib.pyplot as plt
+import gc 
 
 
 
@@ -22,9 +23,9 @@ arguments = argparse.ArgumentParser()
 
 arguments.add_argument("-d", "--date", required=False, help="start date (yyyy-mm-dd)")
 arguments.add_argument("-c", "--instrument", required=False, help="cryptocurrency (BTC, ETH, ...)")
-arguments.add_argument("-t", "--interval", required=False, help="interval (1m,3m,5m,15m,30m,1h,2h,4h) default - 1minute")
+arguments.add_argument("-t", "--interval", required=False, help="interval (1m,3m,5m,15m,30m,1h,2h,4h) default - 5minutes")
 arguments.add_argument("-p", "--period", required=False, help="period (for indicators)")
-arguments.add_argument("-i", "--indicator", required=False, help="specyfied indicator ('BB', 'close', 'upper_BB', 'lower_BB', 'middle_BB', 'ma', 'ADX0','ATR0', 'ARO0', 'WLR0')")
+arguments.add_argument("-i", "--indicator", required=False, help="specyfied indicator ('BB', 'close', ma', 'ADX0','ATR0', 'ARO0', 'WLR0')")
 
 
 #ap.add_argument("-b", "--soperand", required=True, help="second operand")
@@ -38,25 +39,27 @@ if not arg_date is None:
     day = int(arg_date.split("-")[2])
     start_date = dt.datetime(year,month,day,0,0,0)
 
-instrument = "BTCUSDT"
+instrument = "BTC"
 arg_instrument = args['instrument']
 if not arg_instrument is None:
-    instrument = arg_instrument + "USDT"
+    instrument = arg_instrument
 
 
 print("instrument: ", instrument, " start date: ", start_date)
-
-kline_df = get_data(
-        currency=instrument,
-        start_date=start_date)
-
-print(kline_df.head())
-interval = 5
+interval = "5m"
 arg_interval = args['interval']
 if not arg_interval is None:
-    interval = int(arg_interval)
+    interval = arg_interval
 
-kline_df = kline_df.iloc[::interval, :]
+if interval == "5m" and "KLINE_INTERVAL_5MINUTE.csv" in os.listdir():
+    kline_df = pd.read_csv("KLINE_INTERVAL_5MINUTE.csv")
+else:
+    kline_df = get_data(
+        currency=instrument+"USDT",
+        start_date=start_date,
+        interval=interval)
+
+
 
 period = 50
 arg_period = args['period']
@@ -114,14 +117,22 @@ for column in ['close', 'upper_BB', 'lower_BB', 'middle_BB', 'ma', 'ADX0','ATR0'
     ml_df = ml_df.dropna().astype('float32')
     image_data[column] = ml_df
 #create folder
+folder = "images/"
 if not os.path.exists("images"):
     os.mkdir("images")
 
-if not os.path.exists("images/"+str(period)):
-    os.mkdir("images/"+str(period))
+if not os.path.exists("images/"+str(instrument)):
+    os.mkdir("images/"+str(instrument))
+folder += str(instrument) + "/"
+
+if not os.path.exists(folder + str(period)):
+    os.mkdir(folder + str(period))
+
+folder += str(period) + "/"
 
 
-ready = set(os.listdir("images/"+ str(period)))
+
+ready = set(os.listdir(folder))
 
 def generate_image(row, name = "images/plot.png"):
     fig = plt.figure(figsize = (20,20))
@@ -130,14 +141,16 @@ def generate_image(row, name = "images/plot.png"):
     plt.axis('off')
     #plt.show()
     fig.savefig(name, dpi = 3)
+    fig.clf()
     plt.close(fig)
+    gc.collect()
 
 df1 = image_data['upper_BB']
 df2 = image_data['lower_BB']
 df3 = image_data['middle_BB']
 def gen_BB():
     for row1, row2, row3 in zip(df1.iloc, df2.iloc, df3.iloc):
-        name = "images/"+ str(period) + "/" + str(row1.name).replace(" ", "T")[:16] + ";" + "BB" + ".png"
+        name = folder + str(row1.name).replace(" ", "T")[:16] + ";" + "BB" + ".png"
         if str(row1.name)[:16] + ";" + "BB" + ".png" in ready:
             continue
         fig = plt.figure(figsize = (20,20))
@@ -152,7 +165,9 @@ def gen_BB():
         plt.axis('off')
         #plt.show()
         fig.savefig(name, dpi = 3)
+        fig.clf()
         plt.close(fig)
+        gc.collect()
 
 def gen_rest(col_name):
     global period, ready
@@ -161,7 +176,7 @@ def gen_rest(col_name):
     for row in df.iloc:
         if str(row.name).replace(" ", "T")[:16] + ";" + col_name + ".png" in ready:
             continue
-        generate_image(row, "images/"+ str(period) + "/" + str(row.name).replace(" ", "T")[:16] + ";" + col_name + ".png")
+        generate_image(row, folder + str(row.name).replace(" ", "T")[:16] + ";" + col_name + ".png")
 
 arg_ind = args["indicator"]
 if arg_ind is None:
