@@ -1,1 +1,5 @@
 .DS_Store
+KLINE_INTERVAL_5MINUTE.csv
+images/
+images_reduced/
+ratios.json
